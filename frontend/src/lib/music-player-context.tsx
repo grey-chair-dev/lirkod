@@ -231,7 +231,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
           dispatch({ type: 'PAUSE' });
         }
       },
-      onerror: (id, error) => {
+      onloaderror: (id, error) => {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load audio' });
         dispatch({ type: 'SET_LOADING', payload: false });
       },
