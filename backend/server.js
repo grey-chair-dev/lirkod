@@ -203,6 +203,35 @@ app.put('/api/users/profile', (req, res) => {
   });
 });
 
+// Admin endpoint to list all users (for development)
+app.get('/api/users', (req, res) => {
+  // Mock users list
+  const mockUsers = [
+    {
+      id: 'user_1',
+      email: 'admin@lirkod.com',
+      username: 'admin',
+      displayName: 'Admin User',
+      isPremium: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'user_2', 
+      email: 'user@example.com',
+      username: 'testuser',
+      displayName: 'Test User',
+      isPremium: false,
+      createdAt: new Date().toISOString()
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: mockUsers,
+    count: mockUsers.length
+  });
+});
+
 // WebSocket connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
