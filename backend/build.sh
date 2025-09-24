@@ -11,8 +11,4 @@ npm install
 echo "🗄️ Generating Prisma client..."
 npx prisma generate
 
-# Build TypeScript
-echo "🔧 Building TypeScript..."
-npm run build
-
 echo "✅ Build completed successfully!"
