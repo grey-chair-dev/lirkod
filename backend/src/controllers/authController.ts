@@ -29,6 +29,9 @@ interface AuthRequest extends Request {
     username: string;
     isPremium: boolean;
   };
+  body: any;
+  params: any;
+  headers: any;
 }
 
 // Generate JWT tokens

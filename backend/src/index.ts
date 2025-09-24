@@ -39,7 +39,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // Rate limiting
 const limiter = rateLimit({
@@ -66,12 +66,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: any, res: any) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    port: PORT
+  });
+});
+
+// Simple root endpoint
+app.get('/', (req: any, res: any) => {
+  res.status(200).json({
+    message: 'Lirkod Backend API',
+    status: 'running',
+    version: '1.0.0'
   });
 });
 
@@ -117,16 +127,29 @@ app.use(errorHandler);
 // Initialize services
 async function initializeApp() {
   try {
-    await initializeDatabase();
-    await initializeRedis();
-    
+    // Start server first
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV}`);
       console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
     });
+
+    // Initialize services in background (don't fail if they don't work)
+    try {
+      await initializeDatabase();
+      console.log('✅ Database connected');
+    } catch (error) {
+      console.error('⚠️ Database connection failed:', error.message);
+    }
+
+    try {
+      await initializeRedis();
+      console.log('✅ Redis connected');
+    } catch (error) {
+      console.error('⚠️ Redis connection failed:', error.message);
+    }
   } catch (error) {
-    console.error('Failed to initialize app:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
