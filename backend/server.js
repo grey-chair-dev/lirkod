@@ -12,7 +12,11 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: [
+      process.env.CORS_ORIGIN || "http://localhost:3000",
+      "https://lirkod.vercel.app",
+      "https://lirkod-theta.vercel.app"
+    ],
     methods: ["GET", "POST"]
   }
 });
@@ -31,7 +35,11 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: [
+    process.env.CORS_ORIGIN || "http://localhost:3000",
+    "https://lirkod.vercel.app",
+    "https://lirkod-theta.vercel.app"
+  ],
   credentials: true
 }));
 app.use(compression());
