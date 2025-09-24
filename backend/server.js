@@ -76,6 +76,133 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working!' });
 });
 
+// Auth routes
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, username, displayName } = req.body;
+  
+  // Basic validation
+  if (!email || !password || !username) {
+    return res.status(400).json({ 
+      error: 'Email, password, and username are required' 
+    });
+  }
+  
+  // Mock successful registration
+  const mockUser = {
+    id: 'user_' + Date.now(),
+    email,
+    username,
+    displayName: displayName || username,
+    isPremium: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  const mockTokens = {
+    accessToken: 'mock_access_token_' + Date.now(),
+    refreshToken: 'mock_refresh_token_' + Date.now()
+  };
+  
+  res.status(201).json({
+    success: true,
+    data: {
+      user: mockUser,
+      ...mockTokens
+    }
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  // Basic validation
+  if (!email || !password) {
+    return res.status(400).json({ 
+      error: 'Email and password are required' 
+    });
+  }
+  
+  // Mock successful login
+  const mockUser = {
+    id: 'user_' + Date.now(),
+    email,
+    username: email.split('@')[0],
+    displayName: email.split('@')[0],
+    isPremium: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  const mockTokens = {
+    accessToken: 'mock_access_token_' + Date.now(),
+    refreshToken: 'mock_refresh_token_' + Date.now()
+  };
+  
+  res.json({
+    success: true,
+    data: {
+      user: mockUser,
+      ...mockTokens
+    }
+  });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Logged out successfully' 
+  });
+});
+
+// User routes
+app.get('/api/users/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: 'Authorization token required' 
+    });
+  }
+  
+  // Mock user data
+  const mockUser = {
+    id: 'user_123',
+    email: 'user@example.com',
+    username: 'testuser',
+    displayName: 'Test User',
+    isPremium: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    data: mockUser
+  });
+});
+
+app.put('/api/users/profile', (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: 'Authorization token required' 
+    });
+  }
+  
+  // Mock updated user data
+  const mockUser = {
+    id: 'user_123',
+    email: 'user@example.com',
+    username: 'testuser',
+    displayName: req.body.displayName || 'Test User',
+    isPremium: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    data: mockUser
+  });
+});
+
 // WebSocket connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
