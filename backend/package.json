@@ -1,7 +1,7 @@
 {
-  "name": "spotify-clone-backend",
+  "name": "lirkod-backend",
   "version": "1.0.0",
-  "description": "Backend API for Spotify Clone",
+  "description": "Backend API for Lirkod Music Streaming Platform",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",

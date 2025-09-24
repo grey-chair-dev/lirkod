@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Spotify Clone",
-    "slug": "spotify-clone-mobile",
+    "name": "Lirkod",
+    "slug": "lirkod-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.spotifyclone.mobile",
+      "bundleIdentifier": "com.lirkod.mobile",
       "infoPlist": {
         "NSAppleMusicUsageDescription": "This app needs access to music to play songs.",
         "NSMicrophoneUsageDescription": "This app needs access to microphone for voice features."
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#191414"
       },
-      "package": "com.spotifyclone.mobile",
+      "package": "com.lirkod.mobile",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -55,7 +55,7 @@
         }
       ]
     ],
-    "scheme": "spotifyclone",
+    "scheme": "lirkod",
     "extra": {
       "router": {
         "origin": false

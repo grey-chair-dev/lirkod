@@ -1,7 +1,7 @@
 {
-  "name": "spotify-clone",
+  "name": "lirkod",
   "version": "1.0.0",
-  "description": "A modern Spotify clone with full streaming capabilities",
+  "description": "Lirkod - A modern music streaming platform with full streaming capabilities",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -18,14 +18,14 @@
     "test:frontend": "cd frontend && npm test"
   },
   "keywords": [
-    "spotify",
+    "lirkod",
     "music",
     "streaming",
     "react",
     "nodejs",
     "typescript"
   ],
-  "author": "Spotify Clone Team",
+  "author": "Lirkod Team",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"

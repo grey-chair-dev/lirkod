@@ -1,4 +1,4 @@
-# Spotify Clone
+# Lirkod
 
 A modern, full-stack music streaming platform built with cutting-edge technologies.
 
@@ -46,7 +46,7 @@ A modern, full-stack music streaming platform built with cutting-edge technologi
 ## 📁 Project Structure
 
 ```
-spotify-clone/
+lirkod/
 ├── backend/                 # Node.js API server
 │   ├── src/
 │   │   ├── controllers/     # Route controllers
@@ -88,7 +88,7 @@ spotify-clone/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd spotify-clone
+   cd lirkod
    ```
 
 2. **Install dependencies**
@@ -211,4 +211,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Note**: This is a clone/educational project. All music content rights belong to their respective owners.
+**Note**: This is a music streaming platform project. All music content rights belong to their respective owners.

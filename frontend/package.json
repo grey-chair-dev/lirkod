@@ -1,7 +1,7 @@
 {
-  "name": "spotify-clone-frontend",
+  "name": "lirkod-frontend",
   "version": "1.0.0",
-  "description": "Frontend for Spotify Clone",
+  "description": "Frontend for Lirkod Music Streaming Platform",
   "private": true,
   "scripts": {
     "dev": "next dev",
