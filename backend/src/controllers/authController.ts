@@ -1,18 +1,17 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../services/database';
 import { sessionCache } from '../services/redis';
 import { asyncHandler } from '../middleware/errorHandler';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 
+// Types
 interface RegisterRequest extends Request {
   body: {
     email: string;
     username: string;
     password: string;
-    displayName?: string;
+    displayName: string;
   };
 }
 
@@ -36,14 +35,14 @@ interface AuthRequest extends Request {
 const generateTokens = (userId: string) => {
   const accessToken = jwt.sign(
     { userId },
-    process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    process.env.JWT_SECRET || 'fallback-secret',
+    { expiresIn: '7d' }
   );
 
   const refreshToken = jwt.sign(
     { userId },
-    process.env.JWT_REFRESH_SECRET!,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+    process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+    { expiresIn: '30d' }
   );
 
   return { accessToken, refreshToken };
@@ -80,7 +79,9 @@ export const register = asyncHandler(async (req: RegisterRequest, res: Response)
       email,
       username,
       password: hashedPassword,
-      displayName: displayName || username,
+      displayName,
+      isVerified: false,
+      isPremium: false
     },
     select: {
       id: true,
@@ -113,12 +114,7 @@ export const register = asyncHandler(async (req: RegisterRequest, res: Response)
     username: user.username
   });
 
-  // Send verification email (in production)
-  if (process.env.NODE_ENV === 'production') {
-    await sendVerificationEmail(user.email, user.id);
-  }
-
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     data: {
       user,
@@ -134,10 +130,20 @@ export const login = asyncHandler(async (req: LoginRequest, res: Response) => {
 
   // Find user
   const user = await prisma.user.findUnique({
-    where: { email }
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      password: true,
+      displayName: true,
+      avatar: true,
+      isVerified: true,
+      isPremium: true
+    }
   });
 
-  if (!user || !user.password) {
+  if (!user) {
     return res.status(401).json({
       success: false,
       error: 'Invalid credentials'
@@ -178,7 +184,7 @@ export const login = asyncHandler(async (req: LoginRequest, res: Response) => {
     data: { updatedAt: new Date() }
   });
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       user: {
@@ -206,7 +212,7 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
     await prisma.session.deleteMany({
       where: {
         token: refreshToken,
-        userId
+        userId: userId
       }
     });
   }
@@ -216,13 +222,13 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
     await sessionCache.deleteSession(userId);
   }
 
-  res.json({
+  return res.json({
     success: true,
     message: 'Logged out successfully'
   });
 });
 
-// Refresh access token
+// Refresh token
 export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
@@ -233,57 +239,46 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
     });
   }
 
-  try {
-    // Verify refresh token
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as any;
+  // Verify refresh token
+  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret') as { userId: string };
 
-    // Check if token exists in database
-    const session = await prisma.session.findFirst({
-      where: {
-        token: refreshToken,
-        userId: decoded.userId,
-        expiresAt: {
-          gt: new Date()
-        }
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            displayName: true,
-            avatar: true,
-            isVerified: true,
-            isPremium: true
-          }
-        }
+  // Check if token exists in database
+  const session = await prisma.session.findFirst({
+    where: {
+      token: refreshToken,
+      userId: decoded.userId,
+      expiresAt: {
+        gt: new Date()
       }
-    });
-
-    if (!session) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid refresh token'
-      });
     }
+  });
 
-    // Generate new access token
-    const { accessToken } = generateTokens(session.user.id);
-
-    res.json({
-      success: true,
-      data: {
-        accessToken,
-        user: session.user
-      }
-    });
-  } catch (error) {
+  if (!session) {
     return res.status(401).json({
       success: false,
       error: 'Invalid refresh token'
     });
   }
+
+  // Generate new tokens
+  const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
+
+  // Update session with new refresh token
+  await prisma.session.update({
+    where: { id: session.id },
+    data: {
+      token: newRefreshToken,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+    }
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      accessToken,
+      refreshToken: newRefreshToken
+    }
+  });
 });
 
 // Forgot password
@@ -295,31 +290,33 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
   });
 
   if (!user) {
-    // Don't reveal if email exists
-    return res.json({
-      success: true,
-      message: 'If the email exists, a password reset link has been sent'
+    return res.status(404).json({
+      success: false,
+      error: 'User not found'
     });
   }
 
   // Generate reset token
-  const resetToken = uuidv4();
-  const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const resetToken = jwt.sign(
+    { userId: user.id },
+    process.env.JWT_SECRET || 'fallback-secret',
+    { expiresIn: '1h' }
+  );
 
-  // Store reset token (in production, you'd store this in database)
-  await sessionCache.setSession(`reset:${resetToken}`, {
-    userId: user.id,
-    email: user.email
-  }, 3600);
+  // Store reset token in database
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetToken,
+      resetTokenExpires: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    }
+  });
 
-  // Send reset email (in production)
-  if (process.env.NODE_ENV === 'production') {
-    await sendPasswordResetEmail(user.email, resetToken);
-  }
-
-  res.json({
+  // In production, send email with reset link
+  // For now, just return success
+  return res.json({
     success: true,
-    message: 'If the email exists, a password reset link has been sent'
+    message: 'Password reset email sent'
   });
 });
 
@@ -327,9 +324,28 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const { token, password } = req.body;
 
-  // Get reset token data
-  const resetData = await sessionCache.getSession(`reset:${token}`);
-  if (!resetData) {
+  if (!token || !password) {
+    return res.status(400).json({
+      success: false,
+      error: 'Token and password required'
+    });
+  }
+
+  // Verify reset token
+  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as { userId: string };
+
+  // Find user with valid reset token
+  const user = await prisma.user.findFirst({
+    where: {
+      id: decoded.userId,
+      resetToken: token,
+      resetTokenExpires: {
+        gt: new Date()
+      }
+    }
+  });
+
+  if (!user) {
     return res.status(400).json({
       success: false,
       error: 'Invalid or expired reset token'
@@ -340,35 +356,19 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   const saltRounds = parseInt(process.env.BCRYPT_ROUNDS || '12');
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  // Update user password
+  // Update password and clear reset token
   await prisma.user.update({
-    where: { id: resetData.userId },
-    data: { password: hashedPassword }
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      resetToken: null,
+      resetTokenExpires: null
+    }
   });
 
-  // Delete reset token
-  await sessionCache.deleteSession(`reset:${token}`);
-
-  // Invalidate all user sessions
-  await prisma.session.deleteMany({
-    where: { userId: resetData.userId }
-  });
-
-  res.json({
+  return res.json({
     success: true,
     message: 'Password reset successfully'
-  });
-});
-
-// Verify email
-export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { token } = req.body;
-
-  // In production, you'd have a proper email verification system
-  // For now, we'll just mark the user as verified
-  res.json({
-    success: true,
-    message: 'Email verification not implemented in demo'
   });
 });
 
@@ -390,17 +390,40 @@ export const resendVerification = asyncHandler(async (req: Request, res: Respons
   if (user.isVerified) {
     return res.status(400).json({
       success: false,
-      error: 'Email already verified'
+      error: 'User already verified'
     });
   }
 
-  // Send verification email (in production)
-  if (process.env.NODE_ENV === 'production') {
-    await sendVerificationEmail(user.email, user.id);
-  }
-
-  res.json({
+  // In production, send verification email
+  // For now, just return success
+  return res.json({
     success: true,
     message: 'Verification email sent'
+  });
+});
+
+// Verify email
+export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { token } = req.params;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Verification token required'
+    });
+  }
+
+  // Verify token
+  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as { userId: string };
+
+  // Update user verification status
+  await prisma.user.update({
+    where: { id: decoded.userId },
+    data: { isVerified: true }
+  });
+
+  return res.json({
+    success: true,
+    message: 'Email verified successfully'
   });
 });

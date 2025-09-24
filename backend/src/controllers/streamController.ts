@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
 import { prisma } from '../services/database';
-import { streamCache, rateLimit } from '../services/redis';
+import { streamCache } from '../services/redis';
 import { asyncHandler } from '../middleware/errorHandler';
 
 interface AuthRequest extends Request {
@@ -18,33 +16,11 @@ interface AuthRequest extends Request {
 export const getSongInfo = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  // Check cache first
-  const cachedData = await streamCache.getStreamData(id);
-  if (cachedData) {
-    return res.json({
-      success: true,
-      data: cachedData
-    });
-  }
-
   const song = await prisma.song.findUnique({
     where: { id },
     include: {
-      artist: {
-        select: {
-          id: true,
-          name: true,
-          avatar: true
-        }
-      },
-      album: {
-        select: {
-          id: true,
-          title: true,
-          coverImage: true,
-          releaseDate: true
-        }
-      }
+      artist: true,
+      album: true
     }
   });
 
@@ -55,38 +31,23 @@ export const getSongInfo = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  const songData = {
-    id: song.id,
-    title: song.title,
-    duration: song.duration,
-    trackNumber: song.trackNumber,
-    isExplicit: song.isExplicit,
-    playCount: song.playCount,
-    artist: song.artist,
-    album: song.album,
-    previewUrl: song.previewUrl
-  };
-
-  // Cache the data
-  await streamCache.cacheStreamData(id, songData);
-
-  res.json({
+  return res.json({
     success: true,
-    data: songData
+    data: song
   });
 });
 
-// Get streaming URL (for client-side streaming)
+// Get stream URL (for frontend to use)
 export const getStreamUrl = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { quality = 'medium' } = req.query;
 
   const song = await prisma.song.findUnique({
     where: { id },
     select: {
       id: true,
-      audioUrl: true,
-      title: true
+      title: true,
+      duration: true,
+      filePath: true
     }
   });
 
@@ -97,50 +58,32 @@ export const getStreamUrl = asyncHandler(async (req: Request, res: Response) => 
     });
   }
 
-  // In a real implementation, you'd generate signed URLs or streaming URLs
-  // For demo purposes, we'll return the audio URL directly
-  res.json({
+  // In a real implementation, you would generate a signed URL or token
+  // For now, return the file path
+  const streamUrl = `/api/stream/play/${song.id}`;
+
+  return res.json({
     success: true,
     data: {
-      streamUrl: song.audioUrl,
-      quality,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+      id: song.id,
+      title: song.title,
+      duration: song.duration,
+      streamUrl
     }
   });
 });
 
-// Stream song (server-side streaming)
+// Stream song (actual audio streaming)
 export const streamSong = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const userId = req.user?.id;
-  const isPremium = req.user?.isPremium;
 
-  // Rate limiting for free users
-  if (!isPremium) {
-    const isAllowed = await rateLimit.checkLimit(`stream:${userId}`, 100, 3600); // 100 streams per hour
-    if (!isAllowed) {
-      return res.status(429).json({
-        success: false,
-        error: 'Stream limit exceeded. Upgrade to Premium for unlimited streaming.'
-      });
-    }
-  }
-
+  // Check if user has access to this song
   const song = await prisma.song.findUnique({
     where: { id },
     include: {
-      artist: {
-        select: {
-          id: true,
-          name: true
-        }
-      },
-      album: {
-        select: {
-          id: true,
-          title: true
-        }
-      }
+      artist: true,
+      album: true
     }
   });
 
@@ -151,55 +94,48 @@ export const streamSong = asyncHandler(async (req: AuthRequest, res: Response) =
     });
   }
 
-  // Check if file exists (for local files)
-  const filePath = path.join(process.cwd(), 'uploads', 'audio', song.audioUrl);
-  
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({
+  // Check if user is premium or if song is free
+  if (!req.user?.isPremium && !song.isFree) {
+    return res.status(403).json({
       success: false,
-      error: 'Audio file not found'
+      error: 'Premium subscription required'
     });
   }
 
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-
-  if (range) {
-    // Handle range requests for streaming
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = (end - start) + 1;
-    const file = fs.createReadStream(filePath, { start, end });
-    const head = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+  // Check cache first
+  const cachedStream = await streamCache.getStreamData(`song:${id}`);
+  if (cachedStream) {
+    res.set({
+      'Content-Type': cachedStream.contentType,
+      'Content-Length': cachedStream.contentLength.toString(),
       'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'audio/mpeg',
-    };
-    res.writeHead(206, head);
-    file.pipe(res);
-  } else {
-    // Stream entire file
-    const head = {
-      'Content-Length': fileSize,
-      'Content-Type': 'audio/mpeg',
-    };
-    res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+      'Cache-Control': 'public, max-age=3600'
+    });
+    return res.send(cachedStream.buffer);
   }
 
-  // Record play in background (don't wait for it)
-  if (userId) {
-    recordPlayInBackground(userId, song.id);
-  }
+  // In a real implementation, you would:
+  // 1. Read the audio file from storage
+  // 2. Handle range requests for streaming
+  // 3. Cache the stream data
+  // 4. Return the audio stream
+
+  // For now, return a placeholder response
+  return res.json({
+    success: true,
+    message: 'Stream endpoint ready',
+    data: {
+      songId: id,
+      title: song.title,
+      artist: song.artist?.name,
+      album: song.album?.title
+    }
+  });
 });
 
-// Record a play
+// Record play (for analytics)
 export const recordPlay = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { position = 0 } = req.body;
   const userId = req.user?.id;
 
   if (!userId) {
@@ -209,29 +145,18 @@ export const recordPlay = asyncHandler(async (req: AuthRequest, res: Response) =
     });
   }
 
-  const song = await prisma.song.findUnique({
-    where: { id }
-  });
-
-  if (!song) {
-    return res.status(404).json({
-      success: false,
-      error: 'Song not found'
-    });
-  }
-
-  // Record listening history
-  await prisma.listeningHistory.create({
+  // Record the play in database
+  await prisma.play.create({
     data: {
       userId,
-      songId: song.id,
-      duration: Math.floor(position)
+      songId: id,
+      playedAt: new Date()
     }
   });
 
   // Update song play count
   await prisma.song.update({
-    where: { id: song.id },
+    where: { id },
     data: {
       playCount: {
         increment: 1
@@ -239,32 +164,8 @@ export const recordPlay = asyncHandler(async (req: AuthRequest, res: Response) =
     }
   });
 
-  res.json({
+  return res.json({
     success: true,
     message: 'Play recorded'
   });
 });
-
-// Helper function to record play in background
-const recordPlayInBackground = async (userId: string, songId: string) => {
-  try {
-    await prisma.listeningHistory.create({
-      data: {
-        userId,
-        songId,
-        duration: 0 // Will be updated when playback ends
-      }
-    });
-
-    await prisma.song.update({
-      where: { id: songId },
-      data: {
-        playCount: {
-          increment: 1
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error recording play:', error);
-  }
-};

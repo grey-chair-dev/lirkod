@@ -21,6 +21,8 @@ model User {
   isVerified    Boolean   @default(false)
   isPremium     Boolean   @default(false)
   premiumExpiry DateTime?
+  resetToken    String?
+  resetTokenExpires DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -31,6 +33,7 @@ model User {
   likes         Like[]
   comments      Comment[]
   listeningHistory ListeningHistory[]
+  plays         Play[]
   sessions      Session[]
   notifications Notification[]
   devices       Device[]
@@ -86,7 +89,9 @@ model Song {
   trackNumber Int?
   audioUrl    String
   previewUrl  String?
+  filePath    String?
   isExplicit  Boolean  @default(false)
+  isFree      Boolean  @default(false)
   playCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -100,6 +105,7 @@ model Song {
   likes       Like[]
   comments    Comment[]
   listeningHistory ListeningHistory[]
+  plays       Play[]
 
   @@map("songs")
 }
@@ -216,6 +222,19 @@ model ListeningHistory {
   song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
 
   @@map("listening_history")
+}
+
+model Play {
+  id        String   @id @default(cuid())
+  playedAt  DateTime @default(now())
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@map("plays")
 }
 
 model Session {
