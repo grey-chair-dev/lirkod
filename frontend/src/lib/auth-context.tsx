@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/users/me', {
+      const response = await fetch('https://lirkod.onrender.com/api/users/me', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('https://lirkod.onrender.com/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('https://lirkod.onrender.com/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const refreshToken = localStorage.getItem('refreshToken');
-      const response = await fetch('/api/auth/logout', {
+      const response = await fetch('https://lirkod.onrender.com/api/auth/logout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: Partial<User>) => {
-      const response = await fetch('/api/users/profile', {
+      const response = await fetch('https://lirkod.onrender.com/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
