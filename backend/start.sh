@@ -9,4 +9,4 @@ export PORT=${PORT:-10000}
 
 # Start the application
 echo "📡 Starting server on port $PORT..."
-node dist/index.js
+node server.js
