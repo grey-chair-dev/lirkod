@@ -1,0 +1,49 @@
+{
+  "name": "amps-companion",
+  "version": "1.0.0",
+  "description": "Advanced Music Management System (AMPS) companion application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "@prisma/client": "^6.16.2",
+    "autoprefixer": "^10.4.16",
+    "cheerio": "^1.1.2",
+    "lucide-react": "^0.294.0",
+    "next": "^14.0.0",
+    "postcss": "^8.4.31",
+    "prisma": "^6.16.2",
+    "puppeteer": "^24.22.3",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tailwindcss": "^3.3.0",
+    "tsx": "^4.20.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "amps",
+    "music-management",
+    "content-streaming",
+    "music-organization",
+    "advanced-system"
+  ],
+  "author": "AMPS Team",
+  "license": "MIT"
+}

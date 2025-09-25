@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/api/playlists/route": "app/api/playlists/route.js",
+  "/api/dance-types/route": "app/api/dance-types/route.js",
+  "/api/dances/route": "app/api/dances/route.js",
+  "/api/sessions/route": "app/api/sessions/route.js"
+}

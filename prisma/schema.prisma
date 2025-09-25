@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dance {
+  id          String   @id @default(cuid())
+  nameEng     String
+  nameHeb     String
+  yearCreated Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  choreographerId String?
+  songId          String?
+  artistId        String?
+  danceTypeId     String?
+
+  choreographer Choreographer? @relation(fields: [choreographerId], references: [id])
+  song          Song?          @relation(fields: [songId], references: [id])
+  artist        Artist?        @relation(fields: [artistId], references: [id])
+  danceType     DanceType?     @relation(fields: [danceTypeId], references: [id])
+
+  @@map("dances")
+}
+
+model Choreographer {
+  id       String   @id @default(cuid())
+  nameEng  String
+  nameHeb  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dances Dance[]
+
+  @@map("choreographers")
+}
+
+model Song {
+  id          String   @id @default(cuid())
+  nameEng     String
+  nameHeb     String
+  audioFull   String?  // Full audio URL
+  audioShort  String?  // Short preview URL
+  coverImage  String?  // Cover image URL
+  youtubeUrl  String?  // YouTube link
+  spotifyUrl  String?  // Spotify link
+  appleUrl    String?  // Apple Music link
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  dances Dance[]
+
+  @@map("songs")
+}
+
+model Artist {
+  id       String   @id @default(cuid())
+  nameEng  String
+  nameHeb  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dances Dance[]
+
+  @@map("artists")
+}
+
+model DanceType {
+  id        String   @id @default(cuid())
+  nameEng   String   @unique
+  nameHeb   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dances Dance[]
+
+  @@map("dance_types")
+}

@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"lib/amps-client.ts -> ./mock-amps-server\":{\"id\":\"lib/amps-client.ts -> ./mock-amps-server\",\"files\":[\"static/chunks/_app-pages-browser_lib_mock-amps-server_ts.js\"]}}"
