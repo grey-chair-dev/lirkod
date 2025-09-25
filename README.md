@@ -47,6 +47,34 @@ A comprehensive music management and streaming platform designed for content cre
 - **Audio**: HTML5 Audio API with custom controls
 - **TypeScript**: Full type safety throughout
 - **State Management**: React Context for language and user preferences
+- **AMPS Integration**: Complete API client with mock server for development
+
+## AMPS Integration
+
+This application includes comprehensive AMPS (Advanced Music Management System) integration:
+
+### ✅ **What's Working Now**
+- **Mock AMPS Server** - Full simulation for development
+- **AMPS Client** - Complete API integration
+- **Session Management** - Create, join, and control sessions
+- **Playback Control** - Play, pause, skip, seek, volume
+- **Queue Management** - Add, remove, reorder content
+- **System Monitoring** - Hardware status and health checks
+
+### 🔄 **What's Needed for Production**
+- **Real AMPS Hardware** - Physical AMPS system with API endpoints
+- **Authentication System** - User login and role management
+- **Real-time Features** - WebSocket integration for live sync
+- **Audio Processing** - High-quality streaming and format support
+- **Production Deployment** - Infrastructure and security setup
+
+### **Quick AMPS Test**
+1. Switch to "Programmer" role in the app
+2. Click "Connect" to establish AMPS connection
+3. The mock server will simulate all AMPS functionality
+4. Test session creation, playback control, and queue management
+
+For detailed AMPS integration information, see [AMPS_INTEGRATION.md](./AMPS_INTEGRATION.md).
 
 ## Getting Started
 
